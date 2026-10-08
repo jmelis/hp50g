@@ -143,7 +143,7 @@ function search() {
 }
 
 function renderList() {
-  $('#list').innerHTML = results.length ? results.slice(0, 300).map((n, i) => {
+  $('#list').innerHTML = results.length ? results.map((n, i) => {
     const c = DATA.commands[n];
     return `<div class="row${i === sel ? ' sel' : ''}" data-i="${i}"><b>${esc(n)}</b><span>${esc(c.summary || c.locations[0] || '')}</span></div>`;
   }).join('') : '<div class="empty">No matches.</div>';
