@@ -2,6 +2,9 @@
 
 Use an HP 50g from the Mac over its USB cable.
 
+The command finder (searchable `commands.json`) is live at
+[jmelis.github.io/hp50g](https://jmelis.github.io/hp50g/).
+
 1. Plug in the calculator (mini-USB port) and turn it on.
 2. On the calc, type `XSERV` and press ENTER.
 3. Run `./hp` for a REPL, or `./hp --help` for the commands.
