@@ -1,0 +1,122 @@
+@ Probability helpers for the HP 50g.
+@
+@ Only lines starting with « are programs (they are what `make install-programs`
+@ sends to the calculator). Lines starting with @ are comments.
+@
+@ How to read the RPL (reverse Polish) lines below:
+@   « ... »        a program (a block of code)
+@   → a b c « ... » take 3 values off the stack into local variables a, b, c
+@                  (the LAST name gets the TOP of the stack), then run the inner block
+@                  like `def f(a, b, c): ...`
+@   x y *          push x, push y, then * multiplies the top two: operators come AFTER
+@   'NAME' STO     store the program in a variable called NAME
+@   FOR i ... NEXT with a start and end on the stack: `for i in range(start, end+1)`
+@ Order matters: a program that calls another (CBIN calls PBIN) needs the callee stored first.
+@ →NUM converts an exact result like '1/EXP(2)' to a decimal; the plain arithmetic
+@ ones (PBIN etc.) already give decimals when given decimal inputs.
+
+@ ---------------------------------------------------------------------------
+@ PBIN   n k p -> P(X=k), X ~ Binomial(n, p)
+@
+@   from math import comb
+@   def PBIN(n, k, p):
+@       return comb(n, k) * p**k * (1 - p)**(n - k)
+@
+@ Stack walk-through for « n k COMB p k ^ * 1 p - n k - ^ * »
+@   n k COMB       -> C(n,k)
+@   p k ^          -> C(n,k), p^k
+@   *              -> C(n,k) * p^k
+@   1 p -          -> ..., (1-p)
+@   n k -          -> ..., (1-p), (n-k)
+@   ^              -> ..., (1-p)^(n-k)
+@   *              -> C(n,k) p^k (1-p)^(n-k)
+« → n k p « n k COMB p k ^ * 1 p - n k - ^ * » » 'PBIN' STO
+
+@ ---------------------------------------------------------------------------
+@ CBIN   n k p -> P(X<=k), X ~ Binomial(n, p)   (cumulative: add up the pmf)
+@
+@   def CBIN(n, k, p):
+@       total = 0
+@       for i in range(0, k + 1):
+@           total += PBIN(n, i, p)
+@       return total
+@
+@ `0 0 k FOR i`: the first 0 is the running total left on the stack; `0 k` are
+@ the loop limits. Inside the loop, `n i p PBIN +` adds the new term to the total.
+« → n k p « 0 0 k FOR i n i p PBIN + NEXT » » 'CBIN' STO
+
+@ ---------------------------------------------------------------------------
+@ PPOI   lambda k -> P(X=k), X ~ Poisson(lambda)
+@
+@   from math import exp, factorial
+@   def PPOI(l, k):
+@       return exp(-l) * l**k / factorial(k)
+@
+@ (l and k are the local names for lambda and k.) `l NEG EXP` is e^(-l);
+@ `k !` is k factorial. →NUM at the end forces a decimal.
+« → l k « l NEG EXP l k ^ * k ! / →NUM » » 'PPOI' STO
+
+@ ---------------------------------------------------------------------------
+@ CPOI   lambda k -> P(X<=k), X ~ Poisson(lambda)
+@
+@   def CPOI(l, k):
+@       return sum(PPOI(l, i) for i in range(0, k + 1))
+@
+@ Same loop pattern as CBIN.
+« → l k « 0 0 k FOR i l i PPOI + NEXT » » 'CPOI' STO
+
+@ ---------------------------------------------------------------------------
+@ CEXP   lambda x -> P(X<=x), X ~ Exponential with rate lambda
+@
+@   from math import exp
+@   def CEXP(l, x):
+@       return 1 - exp(-l * x)
+« → l x « 1 l x * NEG EXP - →NUM » » 'CEXP' STO
+
+@ ---------------------------------------------------------------------------
+@ BAYES  P(B|A) P(A) P(B) -> P(A|B)      Bayes' formula (1.6)
+@
+@   def BAYES(a, b, c):        # a = P(B|A), b = P(A), c = P(B)
+@       return a * b / c
+@
+@ The names a b c are just positions on the stack, in the order you enter them.
+« → a b c « a b * c / » » 'BAYES' STO
+
+@ ---------------------------------------------------------------------------
+@ EX     { x ... } { p ... } -> E(X) = sum of x * p(x)
+@
+@   def EX(xs, ps):
+@       return sum(x * p for x, p in zip(xs, ps))
+@
+@ No variables needed. On lists, * multiplies element by element (like zip),
+@ and ΣLIST (MTH > LIST) adds up a list. So `* ΣLIST` is the whole program.
+« * ΣLIST » 'EX' STO
+
+@ ---------------------------------------------------------------------------
+@ VX     { x ... } { p ... } -> V(X) = E(X^2) - E(X)^2      formula (2.8)
+@
+@   def VX(xs, ps):
+@       ex2 = sum(x**2 * p for x, p in zip(xs, ps))
+@       ex  = sum(x * p for x, p in zip(xs, ps))
+@       return ex2 - ex**2
+@
+@ `x 2 ^` squares every element of the list; `p *` weights by probability;
+@ ΣLIST sums. The second `x p * ΣLIST` is E(X); `2 ^` squares it; `-` subtracts.
+« → x p « x 2 ^ p * ΣLIST x p * ΣLIST 2 ^ - » » 'VX' STO
+
+@ ---------------------------------------------------------------------------
+@ PGEO   p x -> P(X=x), X ~ G1(p): trials up to and including the first success
+@
+@   def PGEO(p, x):
+@       return (1 - p)**(x - 1) * p
+« → p x « 1 p - x 1 - ^ p * » » 'PGEO' STO
+
+@ ---------------------------------------------------------------------------
+@ PNB    k p x -> P(X=x), negative binomial: trials up to and including the k-th success
+@
+@   from math import comb
+@   def PNB(k, p, x):
+@       return comb(x - 1, k - 1) * p**k * (1 - p)**(x - k)
+@
+@ k-1 successes in the first x-1 trials, then a success on trial x.
+« → k p x « x 1 - k 1 - COMB p k ^ * 1 p - x k - ^ * » » 'PNB' STO

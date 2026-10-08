@@ -1,0 +1,8 @@
+#!/bin/sh
+# Wrapper: creates the venv on first use, then runs hp50g.py.
+DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ ! -x "$DIR/.venv/bin/python" ]; then
+    [ -f /opt/homebrew/lib/libusb-1.0.dylib ] || brew install libusb >&2
+    python3 -m venv "$DIR/.venv" && "$DIR/.venv/bin/pip" install -q pyusb >&2
+fi
+exec "$DIR/.venv/bin/python" "$DIR/hp50g.py" "$@"

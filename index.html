@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HP 50g Command Finder</title>
+<style>
+  :root { --bg:#fafaf8; --fg:#1d1d1b; --muted:#6b6b66; --card:#fff; --line:#dcdcd6; --accent:#1a5fb4; --chip:#eceae4; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161614; --fg:#e8e8e3; --muted:#9a9a92; --card:#1f1f1c; --line:#33332f; --accent:#78aeed; --chip:#2a2a26; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.45 system-ui, sans-serif; }
+  header { padding:16px 16px 8px; position:sticky; top:0; background:var(--bg); z-index:2; border-bottom:1px solid var(--line); }
+  #q { width:100%; font:inherit; font-size:18px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--fg); }
+  #q:focus { outline:2px solid var(--accent); }
+  .hint { color:var(--muted); font-size:12px; margin-top:4px; }
+  main { display:grid; grid-template-columns:230px 1fr 1fr; gap:16px; padding:16px; align-items:start; }
+  @media (max-width:900px) { main { grid-template-columns:1fr; } }
+  nav, #list, #detail { background:var(--card); border:1px solid var(--line); border-radius:8px; }
+  nav { padding:8px; max-height:calc(100vh - 140px); overflow:auto; }
+  nav h4 { margin:8px 6px 4px; font-size:11px; text-transform:uppercase; color:var(--muted); letter-spacing:.05em; }
+  .cat { display:flex; justify-content:space-between; width:100%; text-align:left; background:none; border:0; color:var(--fg); font:inherit; padding:4px 6px; border-radius:5px; cursor:pointer; }
+  .cat:hover { background:var(--chip); }
+  .cat.on { background:var(--accent); color:#fff; }
+  .cat .n { color:var(--muted); font-size:12px; }
+  .cat.on .n { color:#fff; }
+  .sub { padding-left:14px; }
+  #list { max-height:calc(100vh - 140px); overflow:auto; }
+  .row { display:flex; gap:8px; align-items:baseline; padding:7px 12px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .row:hover, .row.sel { background:var(--chip); }
+  .row b { font-family:ui-monospace, Menlo, monospace; min-width:70px; }
+  .row span { color:var(--muted); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #detail { padding:16px; position:sticky; top:96px; }
+  #detail h2 { margin:0; font-family:ui-monospace, Menlo, monospace; font-size:28px; }
+  .type { color:var(--muted); font-size:13px; }
+  .sum { margin:8px 0 12px; font-size:16px; }
+  h3 { font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:14px 0 4px; }
+  .path { display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin:4px 0; }
+  .k { background:var(--chip); border:1px solid var(--line); border-bottom-width:2px; border-radius:5px; padding:1px 8px; font-family:ui-monospace, Menlo, monospace; font-size:13px; }
+  .k.nxt { color:var(--accent); font-weight:600; }
+  .arr { color:var(--muted); }
+  code { font-family:ui-monospace, Menlo, monospace; background:var(--chip); padding:2px 6px; border-radius:4px; display:inline-block; margin:2px 0; }
+  a.see { color:var(--accent); cursor:pointer; margin-right:10px; font-family:ui-monospace, Menlo, monospace; }
+  header { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  #q { flex:1 1 320px; width:auto; }
+  .hint { flex-basis:100%; }
+  #sheetbtn { font:inherit; padding:9px 14px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--fg); cursor:pointer; }
+  #sheetbtn.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  #sheet { grid-column:2 / -1; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:16px; }
+  @media (max-width:900px) { #sheet { grid-column:1; } }
+  #sheet h2 { margin:0 0 4px; }
+  #sheet h3 { margin:18px 0 6px; padding-bottom:3px; border-bottom:1px solid var(--line); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(330px, 1fr)); gap:2px 20px; }
+  .item { padding:4px 0; border-bottom:1px dotted var(--line); cursor:pointer; break-inside:avoid; }
+  .item:hover b { color:var(--accent); }
+  .item b { font-family:ui-monospace, Menlo, monospace; }
+  .item .s { color:var(--muted); font-size:13px; }
+  .item code { font-size:12px; }
+  @media print {
+    header, nav, #detail, #list { display:none !important; }
+    main { display:block; padding:0; }
+    #sheet { border:0; padding:0; }
+    .item { cursor:auto; }
+  }
+  .empty { padding:16px; color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <input id="q" type="search" placeholder="Command name or word (e.g. DUP, laplace, matrix)…" autocomplete="off" autofocus>
+  <button id="sheetbtn" title="Toggle cheat sheet (c)">Cheat sheet</button>
+  <div class="hint">Press <b>/</b> to focus &middot; <b>&uarr;/&darr;</b> to move &middot; matches names first, then summaries, menus and notes</div>
+</header>
+<main>
+  <nav id="nav"></nav>
+  <div id="list"></div>
+  <div id="sheet" hidden></div>
+  <div id="detail"><div class="empty">Pick a command.</div></div>
+</main>
+<script>
+let DATA, NAMES = [], results = [], sel = 0, catFilter = null;
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const catKey = c => c.join(' › ');
+
+fetch('commands.json').then(r => r.json()).then(d => {
+  DATA = d; NAMES = Object.keys(d.commands).sort();
+  buildNav(); search(); fromHash();
+});
+
+function buildNav() {
+  const tops = {};
+  for (const n of NAMES) for (const c of DATA.commands[n].categories) {
+    const t = (tops[c[0]] ??= {n: new Set(), subs: {}});
+    t.n.add(n);
+    if (c[1]) (t.subs[c[1]] ??= new Set()).add(n);
+  }
+  let h = `<button class="cat on" data-c="">All <span class="n">${NAMES.length}</span></button>`;
+  const OTHER = ['Library menus','MENU only','CAT only','Keyboard','Editors (EQW/FILER)','Typed only','Other'];
+  const TOPICS = Object.keys(DATA.topics || {});
+  const order = Object.keys(tops).sort((a, b) => (TOPICS.includes(b) - TOPICS.includes(a)) || (OTHER.includes(a) - OTHER.includes(b)) || a.localeCompare(b));
+  let sepDone = false, menusDone = false;
+  for (const t of order) {
+    if (t === TOPICS[0]) h += '<h4>Topics</h4>';
+    if (!TOPICS.includes(t) && !menusDone) { h += '<h4>Calculator menus</h4>'; menusDone = true; }
+    if (OTHER.includes(t) && !sepDone) { h += '<h4>Other ways to reach commands</h4>'; sepDone = true; }
+    h += `<button class="cat" data-c="${esc(t)}">${esc(t)} <span class="n">${tops[t].n.size}</span></button>`;
+    const subOrder = (DATA.topics || {})[t];
+    for (const s of Object.keys(tops[t].subs).sort((a, b) => subOrder ? subOrder.indexOf(a) - subOrder.indexOf(b) : a.localeCompare(b)))
+      h += `<button class="cat sub" data-c="${esc(t + ' › ' + s)}">${esc(s)} <span class="n">${tops[t].subs[s].size}</span></button>`;
+  }
+  $('#nav').innerHTML = h;
+  $('#nav').onclick = e => {
+    const b = e.target.closest('.cat'); if (!b) return;
+    catFilter = b.dataset.c || null;
+    document.querySelectorAll('.cat').forEach(x => x.classList.toggle('on', x === b));
+    search();
+  };
+}
+
+function inCat(c) {
+  if (!catFilter) return true;
+  return c.categories.some(x => catKey(x) === catFilter || x[0] === catFilter);
+}
+
+function score(n, c, q) {
+  const N = n.toLowerCase();
+  if (N === q) return 100;
+  if (N.startsWith(q)) return 80 - Math.min(n.length, 20) / 10;
+  if (N.includes(q)) return 60;
+  const hay = (c.summary + ' ' + c.locations.join(' ') + ' ' + c.notes.join(' ')).toLowerCase();
+  if (q.split(/\s+/).every(w => hay.includes(w))) return 30;
+  return 0;
+}
+
+function search() {
+  const q = $('#q').value.trim().toLowerCase();
+  results = NAMES.filter(n => inCat(DATA.commands[n]))
+    .map(n => [n, q ? score(n, DATA.commands[n], q) : 1]).filter(x => x[1] > 0)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(x => x[0]);
+  sel = 0; renderList(); if (results.length) show(results[0], false); if (sheetOn) renderSheet();
+}
+
+function renderList() {
+  $('#list').innerHTML = results.length ? results.slice(0, 300).map((n, i) => {
+    const c = DATA.commands[n];
+    return `<div class="row${i === sel ? ' sel' : ''}" data-i="${i}"><b>${esc(n)}</b><span>${esc(c.summary || c.locations[0] || '')}</span></div>`;
+  }).join('') : '<div class="empty">No matches.</div>';
+}
+
+function path(loc) {
+  const parts = loc.split(/\s+/).filter(Boolean);
+  return `<div class="path">` + parts.map((p, i) =>
+    (i ? '<span class="arr">›</span>' : '') + `<span class="k${p === 'NXT' ? ' nxt' : ''}">${esc(p)}</span>`).join('') + `</div>`;
+}
+
+function show(n, hash = true) {
+  const c = DATA.commands[n]; if (!c) return;
+  if (hash) history.replaceState(null, '', '#' + encodeURIComponent(n));
+  let h = `<h2>${esc(n)}</h2><div class="type">${esc(c.type || '')}${c.origin ? ' · since ' + esc(c.origin) : ''}</div>`;
+  if (c.summary) h += `<div class="sum">${esc(c.summary)}</div>`;
+  h += `<h3>How to get there</h3>` + (c.locations.length ? c.locations.map(path).join('') : '<div class="type">Not in a menu.</div>');
+  if (c.menu_numbers.length) h += `<div class="type">Menu #: ${c.menu_numbers.map(esc).join(', ')} (use <code>n MENU</code>)</div>`;
+  if (c.notes.length) h += c.notes.map(x => `<div class="type">${esc(x)}</div>`).join('');
+  if (c.stack.length) h += `<h3>Stack</h3>` + c.stack.map(s => `<div><code>${esc(s)}</code></div>`).join('');
+  if (c.flags.length) h += `<h3>Flags</h3>` + c.flags.map(esc).join('; ');
+  if (c.see_also.length) h += `<h3>See also</h3>` + c.see_also.map(s => `<a class="see" data-n="${esc(s)}">${esc(s)}</a>`).join('');
+  $('#detail').innerHTML = h;
+}
+
+function fromHash() {
+  const n = decodeURIComponent(location.hash.slice(1));
+  if (n && DATA.commands[n]) { $('#q').value = n; search(); show(n); }
+}
+
+$('#q').oninput = search;
+$('#list').onclick = e => { const r = e.target.closest('.row'); if (r) { sel = +r.dataset.i; renderList(); show(results[sel]); } };
+$('#detail').onclick = e => { const a = e.target.closest('.see'); if (a) { $('#q').value = a.dataset.n; search(); show(a.dataset.n); } };
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement !== $('#q')) { e.preventDefault(); $('#q').focus(); $('#q').select(); }
+  else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault(); sel = Math.max(0, Math.min(results.length - 1, sel + (e.key === 'ArrowDown' ? 1 : -1)));
+    renderList(); show(results[sel]); document.querySelector('.row.sel')?.scrollIntoView({block: 'nearest'});
+  }
+});
+
+let sheetOn = false;
+function toggleSheet(on = !sheetOn) {
+  sheetOn = on;
+  $('#sheetbtn').classList.toggle('on', on);
+  $('#sheet').hidden = !on;
+  $('#list').hidden = $('#detail').hidden = on;
+  if (on) renderSheet();
+}
+function renderSheet() {
+  if (!catFilter) {
+    $('#sheet').innerHTML = '<h2>Cheat sheet</h2><div class="empty">Pick a menu in the sidebar (e.g. PRG or MTH › VECTR) to see every command in it, grouped by menu page.</div>';
+    return;
+  }
+  const q = $('#q').value.trim().toLowerCase();
+  const groups = {};   // "Sub|page" -> [names]
+  for (const n of NAMES) {
+    const c = DATA.commands[n];
+    if (q && score(n, c, q) === 0) continue;
+    c.categories.forEach((cat, i) => {
+      if (catKey(cat) !== catFilter && cat[0] !== catFilter) return;
+      const key = (cat[1] || cat[0]) + '|' + String(c.pages[i]).padStart(2, '0');
+      (groups[key] ??= []).push(n);
+    });
+  }
+  const topTopic = catFilter.split(' › ')[0], subOrder = (DATA.topics || {})[topTopic];
+  const keys = Object.keys(groups).sort((a, b) => subOrder ? subOrder.indexOf(a.split('|')[0]) - subOrder.indexOf(b.split('|')[0]) || a.localeCompare(b) : a.localeCompare(b));
+  const total = new Set(keys.flatMap(k => groups[k])).size;
+  const multi = new Set(keys.map(k => k.split('|')[0])).size > 1;
+  let h = `<h2>${esc(catFilter)}</h2><div class="type">${total} commands &middot; click one for details</div>`;
+  for (const k of keys) {
+    const [sub, pg] = k.split('|');
+    const page = +pg > 1 ? ` &mdash; after ${+pg - 1}&times; NXT` : '';
+    const blurb = (DATA.topic_blurbs?.[topTopic] || {})[sub];
+    h += `<h3>${multi || subOrder ? esc(sub) : 'Menu'}${page}</h3>` + (blurb ? `<div class="type">${esc(blurb)}</div>` : '') + `<div class="grid">` + groups[k].map(n => {
+      const c = DATA.commands[n];
+      return `<div class="item" data-n="${esc(n)}"><b>${esc(n)}</b> <span class="s">${esc(c.summary)}</span>` +
+        (c.stack[0] ? `<br><code>${esc(c.stack[0])}</code>` : '') + `</div>`;
+    }).join('') + `</div>`;
+  }
+  $('#sheet').innerHTML = h;
+}
+$('#sheetbtn').onclick = () => toggleSheet();
+$('#sheet').onclick = e => {
+  const it = e.target.closest('.item'); if (!it) return;
+  toggleSheet(false); $('#q').value = it.dataset.n; search(); show(it.dataset.n);
+};
+document.addEventListener('keydown', e => {
+  if (e.key === 'c' && document.activeElement !== $('#q') && !e.metaKey && !e.ctrlKey) toggleSheet();
+});
+window.onhashchange = fromHash;
+</script>
+</body>
+</html>

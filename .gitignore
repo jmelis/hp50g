@@ -1,0 +1,17 @@
+# Reference material: copyrighted by HP, large, kept locally only
+HP 50g AUR.pdf
+*.zip
+
+# Raw extraction data: contains verbatim text copied from the AUR manual
+data/
+
+# Not for the public repo
+personal/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
